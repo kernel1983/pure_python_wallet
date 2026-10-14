@@ -137,62 +137,6 @@ def _encode_dynamic_bytes(data_hex):
     padded_length = (length + 31) // 32 * 32 # Calculate padded length for data
     return length.to_bytes(32, 'big') + data_bytes + b'\x00' * (padded_length - length)
 
-# '{"a": [845300000000000000000000002, 8453, 43114, "0x51055892893c17ae7db48a0c0f760145bfe9f1e5", "0x09ace2d19b0273a762b0fe22b9e5199505c778de", 0, "000000000000000000000000490537058bdddaae99dd4da8b5db5675936bfedf0000000000000000000000000000000000000000000000008ac7230489e80000", "0000000000000000000000000000000000000000000000000000000000000000", "034da1308a53b6586fed90af2bd4e48cc863913551cc41d6148f43441691e4fd1ea27a1e3daf2b4c1386d0426cc37a4423729204177740768970937c93d648961c"], "f": "bridge_incoming_process", "p": "zentest"}'
-def bridge_incoming_process(info, args):
-    #assert args['f'] == 'bridge_incoming_process'
-    #sender = info['sender']
-    #addr = handle_lookup(sender)
-    print('bridge_incoming_process')
-
-    txid = args['a'][0]
-    source_chain_id = args['a'][1]
-    dest_chain_id = args['a'][2]
-    source_chain_sender = args['a'][3]
-    dest_chain_recipient = args['a'][4]
-    gas = args['a'][5]
-    user_payload = args['a'][6]
-    exsig = args['a'][7]
-    signature = args['a'][8]
-
-    encoded_txid = _encode_uint256(txid)
-    encoded_source_chain_id = _encode_uint256(source_chain_id)
-    encoded_dest_chain_id = _encode_uint256(dest_chain_id)
-    encoded_source_chain_sender = _encode_address(source_chain_sender)
-    encoded_dest_chain_recipient = _encode_address(dest_chain_recipient)
-    offset_user_payload = 6 * 32
-    encoded_offset_user_payload = _encode_uint256(offset_user_payload)
-
-    header = b''.join([
-        encoded_txid,
-        encoded_source_chain_id,
-        encoded_dest_chain_id,
-        encoded_source_chain_sender,
-        encoded_dest_chain_recipient,
-        encoded_offset_user_payload,
-    ])
-    encoded_user_payload_data = _encode_dynamic_bytes(user_payload)
-
-    encoded_data = b''.join([
-        header,
-        encoded_user_payload_data,
-    ])
-    print(f"ABI Encoded Data (Pure Python): 0x{encoded_data.hex()}")
-
-    encoded_data_hash = keccak(encoded_data)
-    x19_msg_prefix = b"\x19Ethereum Signed Message:\n" + str(len(encoded_data_hash)).encode('utf-8')
-    x19_msg_hash = keccak(x19_msg_prefix + encoded_data_hash)
-    print(f"x19_msg (Pure Python): 0x{x19_msg_hash.hex()}")
-
-    print('x19', '0x'+x19_msg_hash.hex())
-    print('signature', '0x'+signature)
-    recovered_public_key = _ecdsa_recover('0x'+x19_msg_hash.hex(), '0x'+signature)
-    print(f"recovered public key: {recovered_public_key}")
-    if recovered_public_key:
-        public_key_bytes = bytes.fromhex(recovered_public_key[2:])
-        address_bytes = keccak(public_key_bytes)[-20:]
-        address = '0x' + address_bytes.hex()
-        print(f"Recovered Ethereum address: {address}")
-
 
 if __name__ == '__main__':
     # private_key_hex = "0x0000000000000000000000000000000000000000000000000000000000000001"
@@ -279,5 +223,3 @@ if __name__ == '__main__':
     print(d[6][0].hex(), '_data[0]')
     # print(d[6][1], '_data[2]')
     print(d[6][2].hex(), '_data[2]')
-    print({'a':[d[0], d[1], d[2], d[3], d[4], 0, d[6][0].hex(), d[6][1].hex(), d[6][2].hex()], 'f':'bridge_incoming_process', 'p':'zentest'})
-    bridge_incoming_process({'sender':'0x1234'},{'a':[d[0], d[1], d[2], d[3], d[4], 0, d[6][0].hex(), d[6][1].hex(), d[6][2].hex()], 'f':'', 'p':''})
